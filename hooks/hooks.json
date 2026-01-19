@@ -3,24 +3,24 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm run dev|pnpm( run)? dev|yarn dev|bun run dev)\"",
+        "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm run dev|pnpm( run)? dev|yarn dev|bun run dev|php artisan serve|python manage.py runserver|flask run|uvicorn|flutter run|react-native start|mvn spring-boot:run|gradle bootRun)\"",
         "hooks": [
           {
             "type": "command",
-            "command": "#!/bin/bash\ninput=$(cat)\ncmd=$(echo \"$input\" | jq -r '.tool_input.command // \"\"')\n\n# Block dev servers that aren't run in tmux\necho '[Hook] BLOCKED: Dev server must run in tmux for log access' >&2\necho '[Hook] Use this command instead:' >&2\necho \"[Hook] tmux new-session -d -s dev 'npm run dev'\" >&2\necho '[Hook] Then: tmux attach -t dev' >&2\nexit 1"
+            "command": "#!/bin/bash\ninput=$(cat)\ncmd=$(echo \"$input\" | jq -r '.tool_input.command // \"\"')\n\n# Block dev servers that aren't run in tmux\necho '[Hook] BLOCKED: Dev server must run in tmux for log access' >&2\necho '[Hook] Use this command instead:' >&2\necho \"[Hook] tmux new-session -d -s dev '<your dev command>'\" >&2\necho '[Hook] Then: tmux attach -t dev' >&2\nexit 1"
           }
         ],
-        "description": "Block dev servers outside tmux - ensures you can access logs"
+        "description": "Block dev servers outside tmux - ensures you can access logs (all languages)"
       },
       {
-        "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm (install|test)|pnpm (install|test)|yarn (install|test)|bun (install|test)|cargo build|make|docker|pytest|vitest|playwright)\"",
+        "matcher": "tool == \"Bash\" && tool_input.command matches \"(npm (install|test)|pnpm (install|test)|yarn (install|test)|bun (install|test)|cargo build|make|docker|pytest|phpunit|pest|vitest|playwright|flutter test|jest|mvn test|gradle test)\"",
         "hooks": [
           {
             "type": "command",
             "command": "#!/bin/bash\ninput=$(cat)\nif [ -z \"$TMUX\" ]; then\n  echo '[Hook] Consider running in tmux for session persistence' >&2\n  echo '[Hook] tmux new -s dev  |  tmux attach -t dev' >&2\nfi\necho \"$input\""
           }
         ],
-        "description": "Reminder to use tmux for long-running commands"
+        "description": "Reminder to use tmux for long-running commands (all languages)"
       },
       {
         "matcher": "tool == \"Bash\" && tool_input.command matches \"git push\"",
@@ -65,6 +65,46 @@
         "description": "Auto-format JS/TS files with Prettier after edits"
       },
       {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(php)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Auto-format PHP files after editing\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  if command -v php-cs-fixer >/dev/null 2>&1; then\n    php-cs-fixer fix \"$file_path\" 2>&1 | head -5 >&2\n  elif command -v phpcbf >/dev/null 2>&1; then\n    phpcbf \"$file_path\" 2>&1 | head -5 >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Auto-format PHP files with php-cs-fixer or phpcbf after edits"
+      },
+      {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(py)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Auto-format Python files after editing\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  if command -v black >/dev/null 2>&1; then\n    black \"$file_path\" 2>&1 | head -5 >&2\n  elif command -v autopep8 >/dev/null 2>&1; then\n    autopep8 --in-place \"$file_path\" 2>&1 | head -5 >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Auto-format Python files with black or autopep8 after edits"
+      },
+      {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(dart)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Auto-format Dart files after editing\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  if command -v dart >/dev/null 2>&1; then\n    dart format \"$file_path\" 2>&1 | head -5 >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Auto-format Dart files with dart format after edits"
+      },
+      {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(java)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Auto-format Java files after editing\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  if command -v google-java-format >/dev/null 2>&1; then\n    google-java-format --replace \"$file_path\" 2>&1 | head -5 >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Auto-format Java files with google-java-format after edits"
+      },
+      {
         "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(ts|tsx)$\"",
         "hooks": [
           {
@@ -83,6 +123,26 @@
           }
         ],
         "description": "Warn about console.log statements after edits"
+      },
+      {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(php)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Warn about debug statements in PHP files\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  debug_statements=$(grep -n -E \"(var_dump|dd\\(|dump\\(|print_r)\" \"$file_path\" 2>/dev/null || true)\n  \n  if [ -n \"$debug_statements\" ]; then\n    echo \"[Hook] WARNING: Debug statements found in $file_path\" >&2\n    echo \"$debug_statements\" | head -5 >&2\n    echo \"[Hook] Remove debug statements before committing\" >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Warn about debug statements in PHP files"
+      },
+      {
+        "matcher": "tool == \"Edit\" && tool_input.file_path matches \"\\\\.(py)$\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "#!/bin/bash\n# Warn about print statements in Python files\ninput=$(cat)\nfile_path=$(echo \"$input\" | jq -r '.tool_input.file_path // \"\"')\n\nif [ -n \"$file_path\" ] && [ -f \"$file_path\" ]; then\n  print_statements=$(grep -n \"print(\" \"$file_path\" 2>/dev/null || true)\n  \n  if [ -n \"$print_statements\" ]; then\n    echo \"[Hook] WARNING: print() statements found in $file_path\" >&2\n    echo \"$print_statements\" | head -5 >&2\n    echo \"[Hook] Consider using logging instead of print\" >&2\n  fi\nfi\n\necho \"$input\""
+          }
+        ],
+        "description": "Warn about print statements in Python files"
       }
     ],
     "Stop": [

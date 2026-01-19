@@ -34,24 +34,31 @@ The guide explains:
 ```
 everything-claude-code/
 |-- agents/           # Specialized subagents for delegation
-|   |-- planner.md           # Feature implementation planning
-|   |-- architect.md         # System design decisions
-|   |-- tdd-guide.md         # Test-driven development
-|   |-- code-reviewer.md     # Quality and security review
-|   |-- security-reviewer.md # Vulnerability analysis
-|   |-- build-error-resolver.md
-|   |-- e2e-runner.md        # Playwright E2E testing
-|   |-- refactor-cleaner.md  # Dead code cleanup
-|   |-- doc-updater.md       # Documentation sync
+|   |-- planner.md                # Feature implementation planning
+|   |-- architect.md              # System design decisions
+|   |-- tdd-guide.md              # Test-driven development
+|   |-- code-reviewer.md          # Quality and security review
+|   |-- security-reviewer.md      # Vulnerability analysis
+|   |-- build-error-resolver.md   # Build failure resolution
+|   |-- e2e-runner.md             # Playwright E2E testing
+|   |-- refactor-cleaner.md       # Dead code cleanup
+|   |-- doc-updater.md            # Documentation sync
+|   |-- laravel-specialist.md     # PHP/Laravel specialist
+|   |-- python-django-specialist.md # Python/Django specialist
 |
 |-- skills/           # Workflow definitions and domain knowledge
-|   |-- coding-standards.md         # Language best practices
-|   |-- backend-patterns.md         # API, database, caching patterns
-|   |-- frontend-patterns.md        # React, Next.js patterns
+|   |-- coding-standards.md       # JavaScript/TypeScript best practices
+|   |-- php-laravel-standards.md  # PHP & Laravel standards
+|   |-- python-standards.md       # Python & Django/FastAPI standards
+|   |-- flutter-dart-standards.md # Flutter & Dart standards
+|   |-- react-native-standards.md # React Native standards
+|   |-- java-springboot-standards.md # Java & Spring Boot standards
+|   |-- backend-patterns.md       # API, database, caching patterns
+|   |-- frontend-patterns.md      # React, Next.js patterns
 |   |-- project-guidelines-example.md # Example project-specific skill
-|   |-- tdd-workflow/               # TDD methodology
-|   |-- security-review/            # Security checklist
-|   |-- clickhouse-io.md            # ClickHouse analytics
+|   |-- tdd-workflow/             # TDD methodology
+|   |-- security-review/          # Security checklist
+|   |-- clickhouse-io.md          # ClickHouse analytics
 |
 |-- commands/         # Slash commands for quick execution
 |   |-- tdd.md              # /tdd - Test-driven development
@@ -84,10 +91,86 @@ everything-claude-code/
 |   |-- README.md           # Plugins, marketplaces, skills guide
 |
 |-- examples/         # Example configurations
-    |-- CLAUDE.md           # Example project-level config
-    |-- user-CLAUDE.md      # Example user-level config (~/.claude/CLAUDE.md)
-    |-- statusline.json     # Custom status line config
+|   |-- CLAUDE.md           # Example project-level config
+|   |-- user-CLAUDE.md      # Example user-level config (~/.claude/CLAUDE.md)
+|   |-- statusline.json     # Custom status line config
+|
+|-- SESSION_RECOVERY.md     # Session state tracking for recovery
+|-- RESUME_INSTRUCTIONS.md  # Guide for resuming Claude sessions
 ```
+
+---
+
+## Multi-Language Support
+
+This configuration now supports **6 major languages and frameworks**:
+
+### Supported Languages
+
+| Language | Frameworks | Skills | Agents | Standards |
+|----------|-----------|--------|--------|-----------|
+| **JavaScript/TypeScript** | React, Next.js, Node.js | ✅ | ✅ | Complete |
+| **PHP** | Laravel | ✅ | ✅ | Complete |
+| **Python** | Django, FastAPI, Flask | ✅ | ✅ | Complete |
+| **Dart** | Flutter | ✅ | - | Complete |
+| **JavaScript** | React Native | ✅ | - | Complete |
+| **Java** | Spring Boot | ✅ | - | Complete |
+
+### Language-Specific Features
+
+**PHP/Laravel**:
+- Eloquent ORM patterns & query optimization
+- Migration and seeding best practices
+- Form Request validation patterns
+- API Resource transformations
+- Artisan command development
+- PHPUnit/Pest testing standards
+- Laravel-specific security patterns
+
+**Python/Django**:
+- Django ORM optimization (N+1 prevention)
+- Django REST Framework patterns
+- Celery background task patterns
+- Type hints (Python 3.10+)
+- FastAPI async patterns
+- pytest-django testing
+- Python security best practices
+
+**Flutter/Dart**:
+- Null-safety patterns
+- State management (Riverpod)
+- Widget composition best practices
+- Dart 3+ features (records, sealed classes)
+- Navigation patterns (GoRouter)
+- Clean architecture layers
+- Widget and integration testing
+
+**React Native**:
+- Type-safe navigation (React Navigation)
+- State management (Zustand)
+- Platform-specific code patterns
+- Performance optimization (FlatList, memoization)
+- API integration patterns
+- Testing Library best practices
+- Accessibility standards
+
+**Java/Spring Boot**:
+- Modern Java features (17+: records, sealed classes, pattern matching)
+- Spring Boot 3.x patterns
+- JPA/Hibernate optimization
+- REST API with proper validation
+- MapStruct for DTO mapping
+- JUnit 5 testing patterns
+- Spring Security configuration
+
+### Hooks Support
+
+The hooks system now supports all languages:
+
+- **Auto-formatting**: JavaScript/TypeScript (Prettier), PHP (php-cs-fixer), Python (black), Dart (dart format), Java (google-java-format)
+- **Debug warnings**: console.log (JS/TS), var_dump/dd (PHP), print() (Python)
+- **Dev servers**: npm, Laravel serve, Django runserver, Flutter run, React Native, Spring Boot
+- **Test runners**: Jest, PHPUnit, Pest, pytest, Flutter test, JUnit/Maven
 
 ---
 
@@ -200,11 +283,67 @@ Please contribute! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Ideas for Contributions
 
-- Language-specific skills (Python, Go, Rust patterns)
-- Framework-specific configs (Django, Rails, Laravel)
+- Additional language support (Go, Rust, C#, Kotlin)
+- Framework-specific configs (Rails, ASP.NET, Express)
 - DevOps agents (Kubernetes, Terraform, AWS)
 - Testing strategies (different frameworks)
 - Domain-specific knowledge (ML, data engineering, mobile)
+- Additional agents for other frameworks
+
+---
+
+## Session Recovery
+
+**New Feature**: Session recovery system to maintain context across Claude sessions.
+
+### Why Session Recovery?
+
+Claude Code sessions are stateless - each new session starts fresh with no memory of previous work. This can be frustrating when:
+- Your session times out mid-task
+- You need to switch contexts
+- You want to continue work after a break
+
+### How It Works
+
+1. **SESSION_RECOVERY.md** - Automatically tracks:
+   - Current tasks and their status
+   - Files created/modified/deleted
+   - Architecture decisions made
+   - Problems encountered and solutions
+   - Git status and recent commits
+   - Testing status and coverage
+   - Environment and dependency changes
+
+2. **RESUME_INSTRUCTIONS.md** - Complete guide for:
+   - Quick resume (2 minutes)
+   - Detailed resume (5-10 minutes)
+   - Language-specific resume procedures
+   - Troubleshooting resume issues
+   - Templates for different scenarios
+
+### Usage
+
+**When ending a session**:
+```bash
+# Update SESSION_RECOVERY.md with:
+- Current task status
+- Next steps
+- Any blockers
+- Modified files
+```
+
+**When starting a new session**:
+```bash
+# 1. Read session recovery
+cat SESSION_RECOVERY.md
+
+# 2. Check git status
+git status && git log --oneline -5
+
+# 3. Provide Claude with context from SESSION_RECOVERY.md
+```
+
+See [RESUME_INSTRUCTIONS.md](RESUME_INSTRUCTIONS.md) for detailed procedures.
 
 ---
 
