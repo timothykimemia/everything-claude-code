@@ -115,9 +115,9 @@ npm run test:coverage
 # Verify 80%+ coverage achieved
 ```
 
-## Testing Patterns
+## Testing Patterns by Language
 
-### Unit Test Pattern (Jest/Vitest)
+### JavaScript/TypeScript (Jest/Vitest)
 ```typescript
 import { render, screen, fireEvent } from '@testing-library/react'
 import { Button } from './Button'
@@ -142,6 +142,370 @@ describe('Button Component', () => {
     expect(screen.getByRole('button')).toBeDisabled()
   })
 })
+```
+
+### PHP/Laravel (PHPUnit/Pest)
+```php
+<?php
+
+use App\Models\Market;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+it('creates a market successfully', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/markets', [
+            'name' => 'Bitcoin $100k?',
+            'description' => 'Will BTC reach $100k?',
+            'end_date' => now()->addDays(30)->toDateTimeString(),
+            'category_ids' => [1, 2],
+        ]);
+
+    $response->assertStatus(201)
+        ->assertJsonStructure([
+            'success',
+            'data' => ['id', 'name', 'status', 'created_at'],
+        ]);
+
+    $this->assertDatabaseHas('markets', [
+        'name' => 'Bitcoin $100k?',
+        'creator_id' => $user->id,
+    ]);
+});
+
+it('validates required fields', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/markets', []);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['name', 'description', 'end_date']);
+});
+
+test('market belongs to creator', function () {
+    $market = Market::factory()->create();
+
+    expect($market->creator)->toBeInstanceOf(User::class);
+    expect($market->creator->id)->toBe($market->creator_id);
+});
+```
+
+### Python/Django (pytest-django)
+```python
+import pytest
+from django.contrib.auth import get_user_model
+from rest_framework import status
+from rest_framework.test import APIClient
+
+User = get_user_model()
+
+@pytest.fixture
+def api_client():
+    return APIClient()
+
+@pytest.fixture
+def user(db):
+    return User.objects.create_user(
+        username='testuser',
+        password='testpass123'
+    )
+
+@pytest.fixture
+def market(db, user):
+    return Market.objects.create(
+        name='Bitcoin $100k?',
+        description='Will BTC reach $100k?',
+        creator=user,
+        status=MarketStatus.ACTIVE,
+        end_date=timezone.now() + timedelta(days=30)
+    )
+
+@pytest.mark.django_db
+def test_create_market(api_client, user):
+    """Test user can create a market."""
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post('/api/markets/', {
+        'name': 'Test Market',
+        'description': 'Test description for new market',
+        'end_date': (timezone.now() + timedelta(days=30)).isoformat(),
+        'category_ids': [1, 2],
+    })
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.data['name'] == 'Test Market'
+    assert Market.objects.filter(name='Test Market').exists()
+
+@pytest.mark.django_db
+def test_market_validation(api_client, user):
+    """Test market creation validation."""
+    api_client.force_authenticate(user=user)
+
+    response = api_client.post('/api/markets/', {})
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert 'name' in response.data
+    assert 'description' in response.data
+
+def test_market_is_active(market):
+    """Test market is_active method."""
+    assert market.is_active() is True
+
+    market.status = MarketStatus.RESOLVED
+    assert market.is_active() is False
+```
+
+### Flutter/Dart (flutter_test)
+```dart
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mockito/mockito.dart';
+
+void main() {
+  group('MarketRepository', () {
+    late MarketRepository repository;
+    late MockApiClient mockApiClient;
+    late MockCacheService mockCache;
+
+    setUp(() {
+      mockApiClient = MockApiClient();
+      mockCache = MockCacheService();
+      repository = MarketRepositoryImpl(
+        apiClient: mockApiClient,
+        cache: mockCache,
+      );
+    });
+
+    test('fetchMarkets returns cached data when available', () async {
+      // Arrange
+      final markets = [
+        Market(
+          id: '1',
+          name: 'Test Market',
+          status: MarketStatus.active,
+          createdAt: DateTime.now(),
+        ),
+      ];
+      when(mockCache.get<List<Market>>('markets'))
+          .thenAnswer((_) async => markets);
+
+      // Act
+      final result = await repository.fetchMarkets();
+
+      // Assert
+      expect(result, isA<Success<List<Market>>>());
+      result.when(
+        success: (data) => expect(data, markets),
+        error: (_) => fail('Expected success'),
+      );
+      verifyNever(mockApiClient.get(any));
+    });
+
+    test('fetchMarkets fetches from API when cache is empty', () async {
+      // Arrange
+      when(mockCache.get<List<Market>>('markets'))
+          .thenAnswer((_) async => null);
+      when(mockApiClient.get('/markets')).thenAnswer(
+        (_) async => Response(data: [
+          {'id': '1', 'name': 'Test Market', 'status': 'active'},
+        ]),
+      );
+
+      // Act
+      final result = await repository.fetchMarkets();
+
+      // Assert
+      expect(result, isA<Success<List<Market>>>());
+      verify(mockApiClient.get('/markets')).called(1);
+      verify(mockCache.set('markets', any, duration: anyNamed('duration')))
+          .called(1);
+    });
+  });
+
+  testWidgets('MarketCard displays market information', (tester) async {
+    // Arrange
+    final market = Market(
+      id: '1',
+      name: 'Bitcoin $100k?',
+      description: 'Will BTC reach $100k?',
+      status: MarketStatus.active,
+      createdAt: DateTime.now(),
+    );
+
+    // Act
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: MarketCard(market: market),
+        ),
+      ),
+    );
+
+    // Assert
+    expect(find.text('Bitcoin $100k?'), findsOneWidget);
+    expect(find.text('Will BTC reach $100k?'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+  });
+}
+```
+
+### React Native (React Native Testing Library)
+```typescript
+import React from 'react';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { MarketCard } from './MarketCard';
+import { MarketStatus } from '@/types';
+
+describe('MarketCard', () => {
+  const mockMarket = {
+    id: '1',
+    name: 'Bitcoin $100k?',
+    description: 'Will BTC reach $100k?',
+    status: MarketStatus.ACTIVE,
+    createdAt: new Date(),
+  };
+
+  it('renders market information correctly', () => {
+    const { getByText } = render(<MarketCard market={mockMarket} />);
+
+    expect(getByText('Bitcoin $100k?')).toBeTruthy();
+    expect(getByText('Will BTC reach $100k?')).toBeTruthy();
+  });
+
+  it('calls onPress when pressed', () => {
+    const onPressMock = jest.fn();
+    const { getByTestId } = render(
+      <MarketCard market={mockMarket} onPress={onPressMock} testID="market-card" />
+    );
+
+    fireEvent.press(getByTestId('market-card'));
+
+    expect(onPressMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('displays status badge', () => {
+    const { getByText } = render(<MarketCard market={mockMarket} />);
+
+    expect(getByText('Active')).toBeTruthy();
+  });
+});
+
+describe('useMarkets hook', () => {
+  it('fetches markets on mount', async () => {
+    const mockMarkets = [mockMarket];
+    (marketApi.fetchMarkets as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockMarkets,
+    });
+
+    const { result } = renderHook(() => useMarkets());
+
+    expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.markets).toEqual(mockMarkets);
+    expect(result.current.error).toBeNull();
+  });
+});
+```
+
+### Java/Spring Boot (JUnit 5)
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+@Transactional
+class MarketControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private MarketRepository marketRepository;
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void createMarket_WithValidData_ReturnsCreated() throws Exception {
+        // Arrange
+        MarketCreateDTO createDTO = new MarketCreateDTO(
+            "Bitcoin $100k?",
+            "Will BTC reach $100k?",
+            LocalDateTime.now().plusDays(30),
+            Set.of(UUID.randomUUID())
+        );
+
+        // Act & Assert
+        mockMvc.perform(post("/api/v1/markets")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(createDTO)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.data.name").value(createDTO.name()))
+            .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+
+        // Verify database
+        assertTrue(marketRepository.existsByNameIgnoreCase(createDTO.name()));
+    }
+
+    @Test
+    void getMarket_WhenNotFound_Returns404() throws Exception {
+        // Arrange
+        UUID nonExistentId = UUID.randomUUID();
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/markets/{id}", nonExistentId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.success").value(false))
+            .andExpect(jsonPath("$.error").exists());
+    }
+}
+
+@ExtendWith(MockitoExtension.class)
+class MarketServiceTest {
+
+    @Mock
+    private MarketRepository marketRepository;
+
+    @Mock
+    private MarketMapper marketMapper;
+
+    @InjectMocks
+    private MarketService marketService;
+
+    @Test
+    @DisplayName("Should return market when found by ID")
+    void getMarket_WhenExists_ReturnsMarket() {
+        // Given
+        UUID marketId = UUID.randomUUID();
+        Market market = Market.builder()
+            .id(marketId)
+            .name("Test Market")
+            .status(MarketStatus.ACTIVE)
+            .build();
+        MarketResponseDTO expectedResponse = new MarketResponseDTO(/* ... */);
+
+        when(marketRepository.findById(marketId)).thenReturn(Optional.of(market));
+        when(marketMapper.toResponseDTO(market)).thenReturn(expectedResponse);
+
+        // When
+        MarketResponseDTO result = marketService.getMarket(marketId);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(expectedResponse, result);
+        verify(marketRepository).findById(marketId);
+        verify(marketMapper).toResponseDTO(market);
+    }
+}
 ```
 
 ### API Integration Test Pattern
@@ -228,8 +592,148 @@ test('user can create a new market', async ({ page }) => {
 })
 ```
 
+## Test Commands by Language
+
+### JavaScript/TypeScript
+```bash
+# Run all tests
+npm test
+# or
+npm run test
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm test -- --watch
+
+# Run specific test file
+npm test -- path/to/test.test.ts
+
+# Run E2E tests
+npm run test:e2e
+# or
+npx playwright test
+```
+
+### PHP/Laravel
+```bash
+# Run all tests (PHPUnit)
+php artisan test
+
+# Run with coverage
+php artisan test --coverage
+
+# Run specific test file
+php artisan test tests/Feature/MarketTest.php
+
+# Run specific test method
+php artisan test --filter test_creates_market
+
+# Run parallel tests
+php artisan test --parallel
+
+# Pest syntax
+./vendor/bin/pest
+
+# With coverage
+./vendor/bin/pest --coverage
+```
+
+### Python/Django
+```bash
+# Run all tests (Django)
+python manage.py test
+
+# Run specific app tests
+python manage.py test markets
+
+# With pytest-django
+pytest
+
+# With coverage
+pytest --cov=.
+
+# With coverage report
+pytest --cov=. --cov-report=html
+
+# Run specific test
+pytest markets/tests/test_models.py::test_market_creation
+
+# Verbose mode
+pytest -v
+
+# Stop on first failure
+pytest -x
+```
+
+### Flutter/Dart
+```bash
+# Run all tests
+flutter test
+
+# Run with coverage
+flutter test --coverage
+
+# Run specific test file
+flutter test test/models/market_test.dart
+
+# Run widget tests
+flutter test test/widgets/
+
+# Run integration tests
+flutter test integration_test/
+
+# Generate coverage report
+flutter test --coverage
+genhtml coverage/lcov.info -o coverage/html
+```
+
+### React Native
+```bash
+# Run all tests
+npm test
+
+# With coverage
+npm test -- --coverage
+
+# Run specific test
+npm test -- MarketCard.test.tsx
+
+# Watch mode
+npm test -- --watch
+
+# Update snapshots
+npm test -- -u
+```
+
+### Java/Spring Boot
+```bash
+# Maven - Run all tests
+mvn test
+
+# Maven - Run specific test
+mvn test -Dtest=MarketServiceTest
+
+# Maven - With coverage (JaCoCo)
+mvn test jacoco:report
+
+# Maven - Skip tests
+mvn install -DskipTests
+
+# Gradle - Run all tests
+gradle test
+
+# Gradle - Run specific test
+gradle test --tests MarketServiceTest
+
+# Gradle - With coverage
+gradle test jacocoTestReport
+```
+
 ## Test File Organization
 
+### JavaScript/TypeScript
 ```
 src/
 ├── components/
@@ -249,6 +753,78 @@ src/
     ├── markets.spec.ts               # E2E tests
     ├── trading.spec.ts
     └── auth.spec.ts
+```
+
+### PHP/Laravel
+```
+tests/
+├── Feature/
+│   ├── MarketControllerTest.php
+│   ├── MarketCreationTest.php
+│   └── MarketValidationTest.php
+├── Unit/
+│   ├── MarketServiceTest.php
+│   ├── MarketModelTest.php
+│   └── Helpers/
+│       └── MarketHelperTest.php
+└── Pest.php
+```
+
+### Python/Django
+```
+markets/
+├── tests/
+│   ├── __init__.py
+│   ├── test_models.py
+│   ├── test_views.py
+│   ├── test_serializers.py
+│   ├── test_services.py
+│   └── conftest.py              # pytest fixtures
+```
+
+### Flutter/Dart
+```
+test/
+├── models/
+│   └── market_test.dart
+├── repositories/
+│   └── market_repository_test.dart
+├── widgets/
+│   └── market_card_test.dart
+└── integration_test/
+    └── app_test.dart
+```
+
+### React Native
+```
+src/
+├── components/
+│   ├── MarketCard/
+│   │   ├── MarketCard.tsx
+│   │   └── __tests__/
+│   │       └── MarketCard.test.tsx
+├── hooks/
+│   ├── useMarkets.ts
+│   └── __tests__/
+│       └── useMarkets.test.ts
+└── __tests__/
+    └── integration/
+        └── markets.test.tsx
+```
+
+### Java/Spring Boot
+```
+src/
+├── main/java/com/example/markets/
+└── test/java/com/example/markets/
+    ├── controller/
+    │   └── MarketControllerTest.java
+    ├── service/
+    │   └── MarketServiceTest.java
+    ├── repository/
+    │   └── MarketRepositoryTest.java
+    └── integration/
+        └── MarketIntegrationTest.java
 ```
 
 ## Mocking External Services

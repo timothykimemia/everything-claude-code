@@ -21,20 +21,85 @@ This skill ensures all code follows security best practices and identifies poten
 
 ### 1. Secrets Management
 
-#### ❌ NEVER Do This
+#### JavaScript/TypeScript
 ```typescript
+// ❌ NEVER
 const apiKey = "sk-proj-xxxxx"  // Hardcoded secret
-const dbPassword = "password123" // In source code
+
+// ✅ ALWAYS
+const apiKey = process.env.OPENAI_API_KEY
+if (!apiKey) throw new Error('OPENAI_API_KEY not configured')
 ```
 
-#### ✅ ALWAYS Do This
-```typescript
-const apiKey = process.env.OPENAI_API_KEY
-const dbUrl = process.env.DATABASE_URL
+#### PHP/Laravel
+```php
+// ❌ NEVER
+$apiKey = 'sk-proj-xxxxx';
 
-// Verify secrets exist
+// ✅ ALWAYS
+$apiKey = config('services.openai.key'); // or env('OPENAI_API_KEY')
+if (!$apiKey) {
+    throw new \Exception('OPENAI_API_KEY not configured');
+}
+```
+
+#### Python/Django
+```python
+# ❌ NEVER
+api_key = "sk-proj-xxxxx"
+
+# ✅ ALWAYS
+import os
+from django.core.exceptions import ImproperlyConfigured
+
+api_key = os.getenv('OPENAI_API_KEY')
+if not api_key:
+    raise ImproperlyConfigured('OPENAI_API_KEY not configured')
+```
+
+#### Flutter/Dart
+```dart
+// ❌ NEVER
+const apiKey = 'sk-proj-xxxxx';
+
+// ✅ ALWAYS
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final apiKey = dotenv.env['OPENAI_API_KEY'];
+if (apiKey == null) {
+  throw Exception('OPENAI_API_KEY not configured');
+}
+```
+
+#### React Native
+```typescript
+// ❌ NEVER
+const apiKey = 'sk-proj-xxxxx';
+
+// ✅ ALWAYS
+import Config from 'react-native-config';
+
+const apiKey = Config.OPENAI_API_KEY;
 if (!apiKey) {
-  throw new Error('OPENAI_API_KEY not configured')
+  throw new Error('OPENAI_API_KEY not configured');
+}
+```
+
+#### Java/Spring Boot
+```java
+// ❌ NEVER
+private static final String API_KEY = "sk-proj-xxxxx";
+
+// ✅ ALWAYS
+@Value("${openai.api.key}")
+private String apiKey;
+
+// Or with validation
+@PostConstruct
+public void init() {
+    if (apiKey == null || apiKey.isEmpty()) {
+        throw new IllegalStateException("OPENAI_API_KEY not configured");
+    }
 }
 ```
 
@@ -47,28 +112,198 @@ if (!apiKey) {
 
 ### 2. Input Validation
 
-#### Always Validate User Input
+#### JavaScript/TypeScript (Zod)
 ```typescript
 import { z } from 'zod'
 
-// Define validation schema
 const CreateUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).max(100),
   age: z.number().int().min(0).max(150)
 })
 
-// Validate before processing
 export async function createUser(input: unknown) {
+  const validated = CreateUserSchema.parse(input)
+  return await db.users.create(validated)
+}
+```
+
+#### PHP/Laravel (Form Requests)
+```php
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class CreateUserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'name' => ['required', 'string', 'min:1', 'max:100'],
+            'age' => ['required', 'integer', 'min:0', 'max:150'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'email.required' => 'Email is required',
+            'email.email' => 'Must be valid email',
+        ];
+    }
+}
+
+// In controller
+public function store(CreateUserRequest $request)
+{
+    $validated = $request->validated();
+    return User::create($validated);
+}
+```
+
+#### Python/Django (Serializers)
+```python
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    name = serializers.CharField(min_length=1, max_length=100)
+    age = serializers.IntegerField(min_value=0, max_value=150)
+
+    class Meta:
+        model = User
+        fields = ['email', 'name', 'age']
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already exists")
+        return value
+
+# In view
+def create_user(request):
+    serializer = CreateUserSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        return Response(serializer.data, status=201)
+    return Response(serializer.errors, status=400)
+```
+
+#### Flutter/Dart (Form Validators)
+```dart
+class UserFormValidator {
+  static String? validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Must be valid email';
+    }
+    return null;
+  }
+
+  static String? validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Name is required';
+    }
+    if (value.length > 100) {
+      return 'Name too long (max 100)';
+    }
+    return null;
+  }
+
+  static String? validateAge(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Age is required';
+    }
+    final age = int.tryParse(value);
+    if (age == null || age < 0 || age > 150) {
+      return 'Age must be between 0 and 150';
+    }
+    return null;
+  }
+}
+
+// Usage in Form
+TextFormField(
+  validator: UserFormValidator.validateEmail,
+  decoration: InputDecoration(labelText: 'Email'),
+)
+```
+
+#### React Native (Validation Library)
+```typescript
+import { z } from 'zod';
+
+const CreateUserSchema = z.object({
+  email: z.string().email('Must be valid email'),
+  name: z.string().min(1).max(100),
+  age: z.number().int().min(0).max(150),
+});
+
+function validateUser(data: unknown) {
   try {
-    const validated = CreateUserSchema.parse(input)
-    return await db.users.create(validated)
+    return CreateUserSchema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, errors: error.errors }
+      return { errors: error.flatten() };
     }
-    throw error
+    throw error;
   }
+}
+```
+
+#### Java/Spring Boot (Bean Validation)
+```java
+import jakarta.validation.constraints.*;
+
+public class CreateUserRequest {
+    @NotBlank(message = "Email is required")
+    @Email(message = "Must be valid email")
+    @Size(max = 255)
+    private String email;
+
+    @NotBlank(message = "Name is required")
+    @Size(min = 1, max = 100)
+    private String name;
+
+    @NotNull(message = "Age is required")
+    @Min(0)
+    @Max(150)
+    private Integer age;
+
+    // Getters and setters
+}
+
+// In controller
+@PostMapping("/users")
+public ResponseEntity<?> createUser(
+    @Valid @RequestBody CreateUserRequest request
+) {
+    User user = userService.createUser(request);
+    return ResponseEntity.status(201).body(user);
+}
+
+// Exception handler
+@ExceptionHandler(MethodArgumentNotValidException.class)
+public ResponseEntity<?> handleValidation(MethodArgumentNotValidException ex) {
+    Map<String, String> errors = ex.getBindingResult()
+        .getFieldErrors()
+        .stream()
+        .collect(Collectors.toMap(
+            FieldError::getField,
+            FieldError::getDefaultMessage
+        ));
+    return ResponseEntity.badRequest().body(errors);
 }
 ```
 
@@ -107,33 +342,113 @@ function validateFileUpload(file: File) {
 
 ### 3. SQL Injection Prevention
 
-#### ❌ NEVER Concatenate SQL
+#### JavaScript/TypeScript
 ```typescript
-// DANGEROUS - SQL Injection vulnerability
+// ❌ NEVER Concatenate
 const query = `SELECT * FROM users WHERE email = '${userEmail}'`
-await db.query(query)
-```
 
-#### ✅ ALWAYS Use Parameterized Queries
-```typescript
-// Safe - parameterized query
+// ✅ ALWAYS Parameterize
 const { data } = await supabase
   .from('users')
   .select('*')
   .eq('email', userEmail)
 
 // Or with raw SQL
-await db.query(
-  'SELECT * FROM users WHERE email = $1',
-  [userEmail]
-)
+await db.query('SELECT * FROM users WHERE email = $1', [userEmail])
+```
+
+#### PHP/Laravel
+```php
+// ❌ NEVER Use Raw Concatenation
+$users = DB::select("SELECT * FROM users WHERE email = '$email'");
+
+// ✅ ALWAYS Use Query Builder
+$users = DB::table('users')
+    ->where('email', $email)
+    ->get();
+
+// ✅ Or Eloquent
+$users = User::where('email', $email)->get();
+
+// ✅ Or Parameterized Raw Query
+$users = DB::select('SELECT * FROM users WHERE email = ?', [$email]);
+```
+
+#### Python/Django
+```python
+# ❌ NEVER Use String Formatting
+User.objects.raw(f"SELECT * FROM users WHERE email = '{email}'")
+
+# ✅ ALWAYS Use ORM
+User.objects.filter(email=email)
+
+# ✅ Or Parameterized Raw Query
+User.objects.raw('SELECT * FROM users WHERE email = %s', [email])
+
+# ✅ Django QuerySet (automatically parameterized)
+users = User.objects.filter(
+    email=email,
+    is_active=True
+).select_related('profile')
+```
+
+#### Flutter/Dart (SQLite)
+```dart
+// ❌ NEVER Concatenate
+final users = await db.rawQuery(
+  "SELECT * FROM users WHERE email = '$email'"
+);
+
+// ✅ ALWAYS Parameterize
+final users = await db.query(
+  'users',
+  where: 'email = ?',
+  whereArgs: [email],
+);
+
+// ✅ Or with rawQuery
+final users = await db.rawQuery(
+  'SELECT * FROM users WHERE email = ?',
+  [email],
+);
+```
+
+#### React Native (Same as JavaScript/TypeScript)
+```typescript
+// Use Supabase, Firebase, or other backend with parameterized queries
+const { data } = await supabase
+  .from('users')
+  .select('*')
+  .eq('email', userEmail)
+```
+
+#### Java/Spring Boot
+```java
+// ❌ NEVER Concatenate
+String query = "SELECT * FROM users WHERE email = '" + email + "'";
+
+// ✅ ALWAYS Use JPA
+@Query("SELECT u FROM User u WHERE u.email = :email")
+User findByEmail(@Param("email") String email);
+
+// ✅ Or JDBC PreparedStatement
+String sql = "SELECT * FROM users WHERE email = ?";
+PreparedStatement stmt = connection.prepareStatement(sql);
+stmt.setString(1, email);
+ResultSet rs = stmt.executeQuery();
+
+// ✅ Or JPA Criteria API (type-safe)
+CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+CriteriaQuery<User> query = cb.createQuery(User.class);
+Root<User> user = query.from(User.class);
+query.select(user).where(cb.equal(user.get("email"), email));
 ```
 
 #### Verification Steps
 - [ ] All database queries use parameterized queries
 - [ ] No string concatenation in SQL
 - [ ] ORM/query builder used correctly
-- [ ] Supabase queries properly sanitized
+- [ ] All raw queries use parameter binding
 
 ### 4. Authentication & Authorization
 
@@ -263,30 +578,146 @@ res.setHeader('Set-Cookie',
 
 ### 7. Rate Limiting
 
-#### API Rate Limiting
+#### JavaScript/TypeScript (Express)
 ```typescript
 import rateLimit from 'express-rate-limit'
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 100,
   message: 'Too many requests'
 })
 
-// Apply to routes
 app.use('/api/', limiter)
 ```
 
-#### Expensive Operations
-```typescript
-// Aggressive rate limiting for searches
-const searchLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
-  message: 'Too many search requests'
-})
+#### PHP/Laravel (Middleware)
+```php
+// In RouteServiceProvider or routes file
+Route::middleware(['throttle:60,1'])->group(function () {
+    Route::get('/api/markets', [MarketController::class, 'index']);
+});
 
-app.use('/api/search', searchLimiter)
+// Custom rate limiter
+RateLimiter::for('api', function (Request $request) {
+    return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+});
+
+// Expensive operations
+RateLimiter::for('searches', function (Request $request) {
+    return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
+});
+```
+
+#### Python/Django (django-ratelimit)
+```python
+from django_ratelimit.decorators import ratelimit
+
+@ratelimit(key='ip', rate='100/15m', method='GET')
+def api_endpoint(request):
+    return JsonResponse({'data': 'response'})
+
+# Or with DRF
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+
+class MarketViewSet(viewsets.ModelViewSet):
+    throttle_classes = [UserRateThrottle, AnonRateThrottle]
+
+# settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '100/hour',
+        'anon': '20/hour',
+    }
+}
+```
+
+#### Flutter/Dart (Client-side debouncing)
+```dart
+import 'dart:async';
+
+class RateLimiter {
+  Timer? _timer;
+  final Duration duration;
+
+  RateLimiter({required this.duration});
+
+  void call(VoidCallback action) {
+    _timer?.cancel();
+    _timer = Timer(duration, action);
+  }
+
+  void dispose() {
+    _timer?.cancel();
+  }
+}
+
+// Usage
+final searchLimiter = RateLimiter(duration: Duration(milliseconds: 500));
+searchLimiter.call(() => performSearch(query));
+```
+
+#### React Native (Same as JavaScript/TypeScript)
+```typescript
+// Backend rate limiting (same as Express)
+// Client-side debouncing
+import { useDebounce } from 'use-debounce';
+
+const [searchQuery, setSearchQuery] = useState('');
+const [debouncedQuery] = useDebounce(searchQuery, 500);
+
+useEffect(() => {
+  if (debouncedQuery) {
+    performSearch(debouncedQuery);
+  }
+}, [debouncedQuery]);
+```
+
+#### Java/Spring Boot (Bucket4j)
+```java
+@RestController
+@RequestMapping("/api")
+public class MarketController {
+
+    private final Bucket bucket;
+
+    public MarketController() {
+        Bandwidth limit = Bandwidth.classic(100, Refill.intervally(100, Duration.ofMinutes(15)));
+        this.bucket = Bucket4j.builder()
+            .addLimit(limit)
+            .build();
+    }
+
+    @GetMapping("/markets")
+    public ResponseEntity<?> getMarkets() {
+        if (bucket.tryConsume(1)) {
+            return ResponseEntity.ok(marketService.getMarkets());
+        }
+        return ResponseEntity.status(429).body("Too many requests");
+    }
+}
+
+// Or with interceptor
+@Component
+public class RateLimitInterceptor implements HandlerInterceptor {
+    private final Map<String, Bucket> cache = new ConcurrentHashMap<>();
+
+    @Override
+    public boolean preHandle(HttpServletRequest request,
+                             HttpServletResponse response,
+                             Object handler) throws Exception {
+        String key = request.getRemoteAddr();
+        Bucket bucket = cache.computeIfAbsent(key, k -> createBucket());
+
+        if (bucket.tryConsume(1)) {
+            return true;
+        }
+
+        response.setStatus(429);
+        response.getWriter().write("Too many requests");
+        return false;
+    }
+}
 ```
 
 #### Verification Steps
