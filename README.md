@@ -29,6 +29,25 @@ The guide explains:
 
 ---
 
+## 💰 Token Optimization for $20 Subscription
+
+**NEW**: Comprehensive token optimization guide for organizations with $20/month Pro subscriptions.
+
+**See**: [TOKEN_OPTIMIZATION_GUIDE.md](TOKEN_OPTIMIZATION_GUIDE.md) for:
+- How to maximize productivity within 200k token budget
+- Agent model selection for cost savings (Haiku vs Sonnet vs Opus)
+- MCP server optimization (<10 MCPs per project)
+- Tool optimization (<80 tools active)
+- Session recovery strategies
+- Real-world cost examples with 40-60% savings
+
+**Quick wins**:
+- ✅ Agent models optimized (build-error-resolver, refactor-cleaner, doc-updater, code-reviewer now use Haiku - 3x cost savings)
+- ✅ Direct tool usage over Task tool (10x token savings)
+- ✅ Session recovery workflow (50-100k token savings per resumed session)
+
+---
+
 ## What's Inside
 
 ```
