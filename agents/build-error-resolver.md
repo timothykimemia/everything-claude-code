@@ -2,7 +2,7 @@
 name: build-error-resolver
 description: Build error resolution specialist for all supported languages (JavaScript/TypeScript, PHP/Laravel, Python/Django, Flutter/Dart, React Native, Java/Spring Boot). Use PROACTIVELY when build fails or compilation errors occur. Fixes build/type errors only with minimal diffs, no architectural edits. Focuses on getting the build green quickly.
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: haiku
+model: sonnet
 ---
 
 # Build Error Resolver
